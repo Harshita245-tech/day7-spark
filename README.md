@@ -1,53 +1,78 @@
-````markdown
-# Day 7 - Immutability, Lineage and Fault Tolerance
+# Day 7 – Immutability, Lineage and Fault Tolerance
 
-## Objective
+## 📌 Objective
 
-To understand RDD immutability, lineage and fault tolerance using Apache Spark and Scala.
+The objective of Day 7 is to understand **RDD Immutability, RDD Lineage, and Fault Tolerance** using **Apache Spark and Scala**.
 
-This assignment demonstrates a multi-step RDD transformation chain, RDD lineage, why RDDs are immutable, how Spark recovers lost partitions, and how Spark recomputes data when an executor is lost.
+This exercise demonstrates:
 
-## Technologies Used
+* RDD immutability
+* Multi-step RDD transformations
+* RDD lineage
+* Spark `toDebugString`
+* Fault tolerance through lineage
+* Executor loss scenario
+* Partition recomputation
 
-- Scala 2.12.18
-- Apache Spark 3.5.3
-- Spark Core
-- SBT
-- RDD
+---
 
-## Topics Covered
+## 🛠️ Technologies Used
 
-1. RDD Immutability
-2. Multi-step RDD Transformation Chain
-3. RDD Lineage
-4. Spark `toDebugString` Lineage
-5. Fault Tolerance
-6. Executor Loss Scenario
-7. Partition Recomputation
+| Technology       | Version                             |
+| ---------------- | ----------------------------------- |
+| **Scala**        | 2.12.18                             |
+| **Apache Spark** | 3.5.3                               |
+| **Spark Core**   | 3.5.3                               |
+| **SBT**          | Project Build Tool                  |
+| **RDD**          | Spark Resilient Distributed Dataset |
 
-## 1. RDD Immutability
+---
 
-RDDs are immutable distributed collections.
+# 📚 Topics Covered
 
-This means an existing RDD cannot be modified after it is created.
+1. **RDD Immutability**
+2. **Multi-step RDD Transformation Chain**
+3. **RDD Lineage**
+4. **Spark `toDebugString`**
+5. **Fault Tolerance**
+6. **Executor Loss Scenario**
+7. **Partition Recomputation**
 
-When a transformation is applied, Spark creates a new RDD instead of changing the original RDD.
+---
 
-Example:
+# 1️⃣ RDD Immutability
+
+RDDs are **immutable distributed collections**.
+
+This means that once an RDD is created, it **cannot be modified**.
+
+When a transformation is applied, Spark creates a **new RDD** instead of changing the original RDD.
+
+### Example
 
 ```scala
 val numbers = sc.parallelize(1 to 10)
 val doubled = numbers.map(_ * 2)
 val evenNumbers = doubled.filter(_ % 2 == 0)
-````
+```
 
-Here, `numbers`, `doubled`, and `evenNumbers` are separate RDDs.
+Here:
 
-The original RDD remains unchanged.
+* `numbers` → Original RDD
+* `doubled` → New RDD created by `map`
+* `evenNumbers` → New RDD created by `filter`
 
-## 2. Multi-step RDD Transformation Chain
+The original `numbers` RDD remains unchanged.
 
-A multi-step transformation chain was created:
+### Key Point
+
+> **Transformations never modify an existing RDD. They create new RDDs.**
+
+---
+
+# 2️⃣ Multi-step RDD Transformation Chain
+
+A multi-step transformation chain was implemented using the following operations:
 
 ```text
 Source RDD
@@ -65,37 +90,39 @@ map(_ + 100)
 Final RDD
 ```
 
-For input:
+### Input
 
 ```text
 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 ```
 
-After `map(_ * 2)`:
+### Step 1 – `map(_ * 2)`
 
 ```text
 2, 4, 6, 8, 10, 12, 14, 16, 18, 20
 ```
 
-After `filter(_ > 10)`:
+### Step 2 – `filter(_ > 10)`
 
 ```text
 12, 14, 16, 18, 20
 ```
 
-After `map(_ + 100)`:
+### Step 3 – `map(_ + 100)`
 
 ```text
 112, 114, 116, 118, 120
 ```
 
-## 3. RDD Lineage
+---
 
-RDD lineage is the record of the sequence of transformations used to create an RDD.
+# 3️⃣ RDD Lineage
 
-Spark maintains lineage so that it can recompute lost data when required.
+**RDD Lineage** is the record of the sequence of transformations used to create an RDD.
 
-Lineage for this application:
+Spark maintains this lineage so that it can **recompute lost partitions** when required.
+
+### Lineage
 
 ```text
 Source RDD
@@ -113,56 +140,91 @@ map(_ + 100)
 Final RDD
 ```
 
-If a partition is lost, Spark uses this lineage to determine how the lost partition can be recreated.
+If a partition is lost, Spark uses this lineage to determine how that partition can be recreated.
 
-## 4. Spark toDebugString Lineage
+### Key Point
 
-Spark provides `toDebugString` to display information about an RDD and its dependencies.
+> **Lineage tells Spark how an RDD was created and allows Spark to recompute lost data.**
 
-Example:
+---
+
+# 4️⃣ Spark `toDebugString`
+
+Spark provides the `toDebugString` method to inspect an RDD's dependency and lineage information.
+
+### Example
 
 ```scala
 println(step3.toDebugString)
 ```
 
-This helps inspect the RDD dependency chain created by Spark.
+This displays the RDD dependency chain maintained by Spark.
 
-## 5. Fault Tolerance
+It is useful for understanding:
 
-RDDs provide fault tolerance through lineage.
+* RDD dependencies
+* Parent and child RDDs
+* Partition information
+* Narrow and wide dependencies
 
-If a partition is lost, Spark does not need to recompute the entire RDD.
+---
 
-Spark uses the lineage information to identify the transformations required to recreate the lost partition.
+# 5️⃣ Fault Tolerance
 
-For example:
+RDDs provide **fault tolerance through lineage**.
+
+If a partition is lost, Spark does not need to recompute the entire dataset.
+
+Instead, Spark uses the lineage information to identify the transformations required to recreate the **lost partition**.
+
+### Example
 
 ```text
-Source RDD -> map(_ * 2) -> filter(_ > 10) -> map(_ + 100)
+Source RDD
+    |
+    v
+map(_ * 2)
+    |
+    v
+filter(_ > 10)
+    |
+    v
+map(_ + 100)
+    |
+    v
+Final RDD
 ```
 
-If a final partition is lost, Spark follows the lineage and recomputes the required partition.
+If a partition of the final RDD is lost, Spark follows the lineage and recomputes the required partition.
 
-## 6. Executor Loss Scenario
+### Key Point
 
-Executor loss was simulated conceptually.
+> **Spark can recover lost RDD partitions by recomputing them from their lineage.**
+
+---
+
+# 6️⃣ Executor Loss Scenario
+
+An executor loss scenario was demonstrated **conceptually**.
 
 Assume an executor containing one or more RDD partitions is lost.
 
-Spark:
+Spark performs the following steps:
 
-1. Detects that the partition is unavailable.
-2. Checks the RDD lineage.
-3. Identifies the input partition required.
-4. Re-executes the required transformations.
-5. Recomputes the lost partition.
-6. Continues processing using the available partitions.
+1. **Detects** that the partition is unavailable.
+2. **Checks the RDD lineage.**
+3. **Identifies** the required input partition.
+4. **Re-executes** the required transformations.
+5. **Recomputes** the lost partition.
+6. **Continues processing** using the available partitions.
 
-The entire dataset does not need to be recomputed.
+The entire dataset does **not** need to be recomputed.
 
-## 7. Partition Recomputation
+---
 
-For the following RDD:
+# 7️⃣ Partition Recomputation
+
+Consider the following RDD transformation chain:
 
 ```text
 Source RDD
@@ -177,12 +239,12 @@ filter(_ > 50)
 Processed RDD
 ```
 
-If one partition of the processed RDD is lost, Spark uses the lineage to recompute that partition.
+If one partition of the processed RDD is lost, Spark uses the lineage to recompute **only that partition**.
 
-It re-executes:
+### Recomputation Flow
 
 ```text
-Source partition
+Source Partition
        |
        v
 map(_ * 10)
@@ -191,12 +253,14 @@ map(_ * 10)
 filter(_ > 50)
        |
        v
-Recovered partition
+Recovered Partition
 ```
 
-Other available partitions are reused.
+The other available partitions are reused.
 
-## Sample Output
+---
+
+# 🖥️ Sample Output
 
 ```text
 ===== DAY 7 - IMMUTABILITY, LINEAGE AND FAULT TOLERANCE =====
@@ -278,24 +342,79 @@ Final RDD Partitions: 4
 ===== DAY 7 IMMUTABILITY, LINEAGE AND FAULT TOLERANCE COMPLETED =====
 ```
 
-## How to Run
+---
+
+# ▶️ How to Run
+
+Navigate to the Day 7 project directory:
 
 ```bash
 cd ~/day7-spark
+```
+
+Compile the project:
+
+```bash
 sbt compile
+```
+
+Run the application:
+
+```bash
 sbt run
 ```
 
-## Files
+---
 
-* `Day7LineageFaultTolerance.scala` - Main Spark application
-* `build.sbt` - SBT project configuration
-* `project/build.properties` - SBT version
-* `.gitignore` - Ignores generated files
+# 📁 Project Files
 
-## Result
+```text
+day7-spark/
+│
+├── src/
+│   └── main/
+│       └── scala/
+│           └── Day7LineageFaultTolerance.scala
+│
+├── project/
+│   └── build.properties
+│
+├── build.sbt
+├── .gitignore
+└── README.md
+```
 
-Successfully demonstrated RDD immutability, multi-step transformations, RDD lineage, fault tolerance, partition recovery, and conceptual executor loss using Apache Spark.
+### File Description
 
-===== DAY 7 COMPLETED =====
+| File                              | Description                   |
+| --------------------------------- | ----------------------------- |
+| `Day7LineageFaultTolerance.scala` | Main Spark application        |
+| `build.sbt`                       | SBT project configuration     |
+| `project/build.properties`        | SBT version configuration     |
+| `.gitignore`                      | Ignores generated/build files |
+| `README.md`                       | Project documentation         |
 
+---
+
+# 🎯 Result
+
+The Day 7 exercise successfully demonstrated:
+
+* ✅ **RDD Immutability**
+* ✅ **Multi-step RDD Transformations**
+* ✅ **RDD Lineage**
+* ✅ **Spark `toDebugString`**
+* ✅ **Fault Tolerance**
+* ✅ **Executor Loss Concept**
+* ✅ **Partition Recomputation**
+
+The exercise shows how Spark uses **RDD lineage to recover lost partitions without recomputing the entire dataset**.
+
+---
+
+# ✅ Day 7 Completed
+
+**Topic:** Immutability, Lineage and Fault Tolerance
+**Framework:** Apache Spark
+**Language:** Scala
+**Build Tool:** SBT
